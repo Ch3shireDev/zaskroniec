@@ -1,0 +1,25 @@
+#!/bin/bash
+# zcc prog.py [-o wyjscie] [-S] -- kompilacja zaskronca do binarki w jednym kroku.
+# Uzywa stages/stage1, jesli jest zbudowany; inaczej python3 src/zc.py.
+set -e
+ROOT=$(cd "$(dirname "$(readlink -f "$0")")" && pwd)
+src=""; out=""; asm_only=0
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -o) out="$2"; shift 2 ;;
+        -S) asm_only=1; shift ;;
+        -h|--help) echo "uzycie: zcc prog.py [-o wyjscie] [-S]"; exit 0 ;;
+        *) src="$1"; shift ;;
+    esac
+done
+[ -n "$src" ] || { echo "uzycie: zcc prog.py [-o wyjscie] [-S]" >&2; exit 2; }
+[ -n "$out" ] || out="${src%.py}"
+if [ -x "$ROOT/stages/stage1" ]; then ZC=("$ROOT/stages/stage1"); else ZC=(python3 "$ROOT/src/zc.py"); fi
+if [ $asm_only -eq 1 ]; then
+    "${ZC[@]}" < "$src" > "$out.s"
+    exit 0
+fi
+tmp=$(mktemp --suffix=.s)
+trap 'rm -f "$tmp"' EXIT
+"${ZC[@]}" < "$src" > "$tmp"
+gcc -O2 "$tmp" "$ROOT/runtime/rt.c" -o "$out"

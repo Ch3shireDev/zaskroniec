@@ -1,3 +1,6 @@
 build/
 stages/
 __pycache__/
+# binarki skompilowane w examples/
+examples/*
+!examples/*.*
