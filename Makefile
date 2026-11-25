@@ -1,46 +1,54 @@
 CC = gcc
 CFLAGS = -O2
 RT = runtime/rt.c
+ZC_SRC = src/zc.py
+# bootstrap ma wlasny katalog, niezalezny od build/ (testy)
+B = stages
 
-.PHONY: all stage1 stage2 stage3 bootstrap test test-stage1 test-stage2 clean
+.PHONY: all stage1 stage2 stage3 bootstrap test test-cerr test-stage1 test-stage2 test-all clean
 
 all: stage1
 
-build:
-	mkdir -p build
+$(B):
+	mkdir -p $(B)
 
-build/stage1.s: src/zc.py | build
-	python3 src/zc.py < src/zc.py > $@
+$(B)/stage1.s: $(ZC_SRC) | $(B)
+	python3 $(ZC_SRC) < $(ZC_SRC) > $@
 
-build/stage1: build/stage1.s $(RT)
+$(B)/stage1: $(B)/stage1.s $(RT)
 	$(CC) $(CFLAGS) $< $(RT) -o $@
 
-build/stage2.s: build/stage1 src/zc.py
-	build/stage1 < src/zc.py > $@
+$(B)/stage2.s: $(B)/stage1 $(ZC_SRC)
+	$(B)/stage1 < $(ZC_SRC) > $@
 
-build/stage2: build/stage2.s $(RT)
+$(B)/stage2: $(B)/stage2.s $(RT)
 	$(CC) $(CFLAGS) $< $(RT) -o $@
 
-build/stage3.s: build/stage2 src/zc.py
-	build/stage2 < src/zc.py > $@
+$(B)/stage3.s: $(B)/stage2 $(ZC_SRC)
+	$(B)/stage2 < $(ZC_SRC) > $@
 
-stage1: build/stage1
-stage2: build/stage2
-stage3: build/stage3.s
+stage1: $(B)/stage1
+stage2: $(B)/stage2
+stage3: $(B)/stage3.s
 
-bootstrap: build/stage3.s
-	cmp build/stage2.s build/stage3.s
-	@cmp -s build/stage1.s build/stage2.s && echo "stage1.s == stage2.s == stage3.s" || echo "stage2.s == stage3.s (stage1.s differs)"
+bootstrap: $(B)/stage3.s
+	cmp $(B)/stage2.s $(B)/stage3.s
+	@cmp -s $(B)/stage1.s $(B)/stage2.s && echo "stage1.s == stage2.s == stage3.s" || echo "stage2.s == stage3.s (stage1.s differs)"
 	@echo "fixed point reached"
 
 test:
 	tests/run.sh
+	tests/cerr.sh
 
-test-stage1: build/stage1
-	ZC=build/stage1 tests/run.sh
+test-stage1: $(B)/stage1
+	ZC=$(B)/stage1 tests/run.sh
+	ZC=$(B)/stage1 tests/cerr.sh
 
-test-stage2: build/stage2
-	ZC=build/stage2 tests/run.sh
+test-stage2: $(B)/stage2
+	ZC=$(B)/stage2 tests/run.sh
+	ZC=$(B)/stage2 tests/cerr.sh
+
+test-all: test bootstrap test-stage1 test-stage2
 
 clean:
-	rm -rf build
+	rm -rf build $(B)

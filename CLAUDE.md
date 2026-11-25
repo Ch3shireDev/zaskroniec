@@ -5,14 +5,14 @@ Kompilator **zc** dla języka **zaskroniec** (ścisły podzbiór Pythona 3) do a
 (GNU as, składnia AT&T), linkowany z małym runtime'em w C do natywnej binarki ELF na Linuksie.
 Kompilator jest napisany **w zaskrońcu**, więc od pierwszego dnia uruchamia go zwykły `python3`.
 
-## Bootstrap (najważniejsza część)
+## Bootstrap (najważniejsza część) — w katalogu `stages/`, testy w `build/`
 ```
-stage0: python3 src/zc.py < src/zc.py > build/stage1.s     # kompilator uruchomiony przez CPython
-        gcc build/stage1.s runtime/rt.c -o build/stage1
-stage1: build/stage1 < src/zc.py > build/stage2.s          # binarka kompiluje samą siebie
-        gcc build/stage2.s runtime/rt.c -o build/stage2
-stage2: build/stage2 < src/zc.py > build/stage3.s
-CHECK:  cmp build/stage2.s build/stage3.s                  # MUSI być identyczne (fixed point)
+stage0: python3 src/zc.py < src/zc.py > stages/stage1.s     # kompilator uruchomiony przez CPython
+        gcc stages/stage1.s runtime/rt.c -o stages/stage1
+stage1: stages/stage1 < src/zc.py > stages/stage2.s          # binarka kompiluje samą siebie
+        gcc stages/stage2.s runtime/rt.c -o stages/stage2
+stage2: stages/stage2 < src/zc.py > stages/stage3.s
+CHECK:  cmp stages/stage2.s stages/stage3.s                  # MUSI być identyczne (fixed point)
 ```
 Bonus: `stage1.s == stage2.s` też powinno zachodzić, jeśli generowanie kodu jest deterministyczne.
 
